@@ -37,7 +37,7 @@ interpolators = [
 
 scores = []
 for name, interpolator in interpolators:
-    score = interpolator.run(50, evaluate=True, evaluation_frequency=25,
+    score = interpolator.run(300, evaluate=True, evaluation_frequency=25,
                              evaluation_set=test_set, evaluation_metrics=[MAE])
     interpolator.save_plot(f'MAE: {score[-1][1][0]:.3g}')
     scores.append((score, name))
