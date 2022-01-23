@@ -17,6 +17,9 @@ class Domain(metaclass=ABCMeta):
         raise NotImplementedError
         return None
 
+    def bbox_dimensions(self):
+        return self.bbox()[1] - self.bbox()[0]
+
     # Intersect the domain boundary with a segment between point_0 and point_1
     def intersect(self, point0, point1):
         assert self.contains(point0) != self.contains(point1),\
@@ -92,12 +95,13 @@ class RectangularDomain(Domain):
     def bbox(self):
         return self.lower, self.upper
 
-    def contains(self, point):
+    def contains(self, point, precision=0.00001):
         point = np.array(point)
         assert point.shape == self.lower.shape,\
                f"Shape of the point ({point.shape}) does not match the domain limits shape ({self.lower.shape})"
 
-        return (self.lower <= point).all() and (point <= self.upper).all()
+        margin = np.ones(point.shape[0]) * precision
+        return (self.lower - margin <= point).all() and (point <= self.upper + margin).all()
 
     def intersect(self, point0, point1):
         assert self.contains(point0) != self.contains(point1),\
@@ -118,6 +122,9 @@ class RectangularDomain(Domain):
 
         assert False, f"Did not find an intersection with ({point0}, {point1})"
 
+    @classmethod
+    def unit(cls, dimensions=2):
+        return RectangularDomain(np.zeros(dimensions), np.ones(dimensions))
 
 class SphericalDomain(Domain):
     def __init__(self, center, radius):
@@ -137,4 +144,6 @@ class SphericalDomain(Domain):
                f"Shape of the point ({point.shape}) does not match the domain limits shape ({self.center.shape})"
         return sum((point - self.center) ** 2) <= self.radius ** 2
 
-
+    @classmethod
+    def unit(cls, dimensions=2):
+        return SphericalDomain(np.zeros(dimensions), 1.0)

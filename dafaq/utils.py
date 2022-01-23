@@ -16,10 +16,10 @@ def reset_plot_style():
     plt.rcParams['font.size'] = font_size
     plt.rcParams['text.usetex'] = use_tex
 
-def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0, tex=False):
+def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0, tex=False, log_scale=False):
     load_plot_style(tex)
 
-    figure, axes = plt.subplots()
+    figure, axes = plt.subplots(dpi=600)
     color_list = list(mcolors.TABLEAU_COLORS)
     style_list = ['-', '--', '-.', ':']
 
@@ -40,25 +40,30 @@ def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0
                 metric_values.append([scores[j][k][1][i] for k in range(len(scores[j]))])
             metric_values = np.asarray(metric_values)
             average = sum(metric_values) / len(metric_values)
-            minimum = np.minimum(*metric_values) if len(metric_values) > 1 else metric_values[0]
-            maximum = np.maximum(*metric_values) if len(metric_values) > 1 else metric_values[0]
+            minimum = np.minimum.reduce(metric_values) if len(metric_values) > 1 else metric_values[0]
+            maximum = np.maximum.reduce(metric_values) if len(metric_values) > 1 else metric_values[0]
+            std = (sum(abs(metric_values - average) ** 2) / len(metric_values)) ** 0.5
 
             indices = scores[0][:, 0][skip_first:]
             average = average[skip_first:]
             minimum = minimum[skip_first:]
             maximum = maximum[skip_first:]
+            std = std[skip_first:]
 
             axes.plot(indices, average,
                       style_list[i % len(style_list)],
-                      label=f'{name}, {metric_names[i]}',
+                      label=f'{name}' + (f', {metric_names[i]}' if metric_names[i] else ''),
                       c=color_list[index],
                       linewidth=1)
-            axes.fill_between(indices.astype(int), minimum.astype(float), maximum.astype(float), alpha=0.25, edgecolor=color_list[index], facecolor=color_list[index])
+            axes.fill_between(indices.astype(int), (average - std).astype(float), (average + std).astype(float), alpha=0.25, edgecolor=color_list[index], facecolor=color_list[index])
         index += 1
     
     axes.legend()
     axes.set_title(title)
+    if log_scale:
+        axes.set_yscale('log')
 
+    plt.tight_layout()
     figure.savefig(filename)
 
     reset_plot_style()

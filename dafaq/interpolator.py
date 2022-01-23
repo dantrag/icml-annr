@@ -1,19 +1,27 @@
-from re import S
+from random import seed
 from dafaq.function import Function
-from dafaq.domain import Domain
+from dafaq.domain import Domain, RectangularDomain
 from dafaq.geometry_utils import *
 
 from abc import ABCMeta, abstractmethod
 
-import numpy as np
 import math
-from numpy.random import random
-from scipy.spatial import Delaunay
+import numpy as np
+from numpy.random import random, choice
+from scipy.spatial import Delaunay, Voronoi, ConvexHull
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib import cm
+from matplotlib.colors import to_rgba
+
 from tqdm import tqdm
 
 from dafaq.utils import load_plot_style, reset_plot_style
+
+
+line_width = 0.5
+alpha = 0.9
 
 def adaptive_marker_size(count):
     return min(20, 200 // math.sqrt(count))
@@ -40,25 +48,51 @@ class Interpolator(metaclass=ABCMeta):
     def evaluate(self, point):
         raise NotImplementedError
 
-    def run(self, iteration_count,
+    def run(self, iteration_count, continues=False,
             evaluate=False, evaluation_frequency=1,
             evaluation_set=np.array([]), evaluation_metrics=[]):
         raise NotImplementedError
 
-    def plot(self, axes, points=True, partitioning=True):
-        if points:
-            self.plot_points(axes)
-        if partitioning:
-            self.plot_partitioning(axes)
+    def plot_extra(self, axes, **args):
+        pass
 
-    def save_plot(self, title, points=True, partitioning=True):
+    def plot_approximate(self, axes, **args):
+        pass
+
+    def plot(self, axes, points=True, partitioning=True, **args):
+        if points:
+            self.plot_points(axes, **args)
+        if partitioning:
+            self.plot_partitioning(axes, **args)
+
+        self.plot_extra(axes, **args)
+        
+
+    def save_plot(self, filename='auto', title='', points=True, partitioning=True, mode='approx', **args):
         load_plot_style()
 
         figure, axes = plt.subplots()
-        self.plot(axes, points=points, partitioning=partitioning)
-        self.function.draw(axes, self.domain)
+        self.plot(axes, points=points, partitioning=partitioning, **args)
+
+        if mode == 'approx':
+            self.plot_approximate(axes, **args)
+        elif mode == 'gt':
+            self.function.draw(axes, self.domain)
+
+        if 'show_axes' in args:
+            if not args['show_axes']:
+                axes.set_axis_off()
         axes.set_title(title)
-        figure.savefig(f'{self.name}_{self.sample_count()}.png')
+        axes.set_xlim(self.domain.bbox()[0][0], self.domain.bbox()[1][0])
+        axes.set_ylim(self.domain.bbox()[0][1], self.domain.bbox()[1][1])
+        axes.set_aspect(self.domain.bbox_dimensions()[1] / self.domain.bbox_dimensions()[0])
+        
+        figure.tight_layout()
+
+        if filename == 'auto':
+            filename = f'{self.name}_{self.sample_count()}.png'
+        figure.savefig(filename,
+                       dpi=600, bbox_inches='tight', pad_inches=0.05)
 
         reset_plot_style()
  
@@ -73,29 +107,37 @@ class DelaunayInterpolator(Interpolator):
     base_name = "ANNR"
     iteration_offset = 0
 
-    def __init__(self, function, domain, seeds, Lambda=1.0):
+    def __init__(self, function, domain, seeds=10, add_corners=True, Lambda=1.0):
         super().__init__(function, domain)
 
         self.points = np.empty([0, domain.dimensionality()])
+
+        if isinstance(seeds, int):
+            seeds = self.domain.sample_random(seeds)
+            if add_corners:
+                seeds = np.concatenate((seeds, domain.corners()), axis=0)
+
         self.seeds_count = len(seeds)
         if len(seeds):
             self.add_points(seeds)
         self.Lambda = Lambda
         self.name = f'dafaq_{function.name}_{hex(id(self))}'
-        self.iteration_offset = len(seeds)
+        self.iteration_offset = self.seeds_count
 
     def sample_count(self):
         return len(self.points)
 
-    def add_points(self, new_points):
+    def add_points(self, new_points, manual_addition=False):
         self.points = np.concatenate((self.points, new_points), axis=0)
         
         # Recomputing entire triangulation. Can be done more efficiently with Delaunay update algos
         self.triangulation = Delaunay(self.points).simplices
         
         if self.sample_count() % 100 == 0:
+            pass
+            #if not manual_addition:
+            #    self.save_points_to_file()
             #self.snapshots.append(self.points.copy())
-            np.save(f'{self.name}_{self.sample_count()}.npy', self.points)
             #print(len(self.points))
 
     def score(self, simplex_points):
@@ -114,10 +156,16 @@ class DelaunayInterpolator(Interpolator):
 
         self.add_points([new_point])
 
-    def run(self, iteration_count,
+    def run(self, iteration_count, continues=False,
             evaluate=False, evaluation_frequency=None,
             evaluation_set=np.array([]), evaluation_metrics=[]):      
         print(f"Running {self.base_name} ({self.name})...", flush=True)
+
+        if not continues:
+            # reset initialization
+            self.points = self.points[:self.seeds_count]
+            self.iteration_offset = self.seeds_count
+            self.triangulation = Delaunay(self.points).simplices
 
         if not evaluate or not evaluation_frequency:
             evaluation_frequency = iteration_count * 2
@@ -150,19 +198,73 @@ class DelaunayInterpolator(Interpolator):
                 cell = p
         return self.function(cell)
 
-    def plot_points(self, axes):
-        marker_size = adaptive_marker_size(self.sample_count())
-        axes.scatter(self.points[:self.seeds_count, 0], self.points[:self.seeds_count, 1], s=marker_size, c='Red', alpha=0.9)
-        axes.scatter(self.points[self.seeds_count:, 0], self.points[self.seeds_count:, 1], s=marker_size, c='Orange', alpha=0.9)
+    def save_points_to_file(self, filename="auto"):
+        if filename == "auto":
+            filename = f'{self.name}_{self.sample_count()}.npy'
+        np.save(filename, self.points, allow_pickle=True)
+    
+    def load_points_from_file(self, filename):
+        points = np.load(filename, allow_pickle=True)
+        self.points = np.empty([0, self.domain.dimensionality()])
+        self.add_points(points, manual_addition=True)
 
-    def plot_partitioning(self, axes):
+
+    def plot_points(self, axes, **args):
+        seed_color = 'Red' if (not 'highlight_seeds' in args) or args['highlight_seeds'] else 'Orange'
+
+        marker_size = adaptive_marker_size(self.sample_count())
+        axes.scatter(self.points[:self.seeds_count, 0], self.points[:self.seeds_count, 1], s=marker_size, zorder=10, c=seed_color, alpha=alpha)
+        axes.scatter(self.points[self.seeds_count:, 0], self.points[self.seeds_count:, 1], s=marker_size, zorder=10, c='Orange', alpha=alpha)
+
+    def plot_approximate(self, axes, **args):
+        # expand the bounding box to avoid having empty areas
+        double_bbox_corners = (self.domain.corners() - np.average(self.domain.corners())) * 2 + np.average(self.domain.corners())
+        pts = np.vstack((self.points, double_bbox_corners))
+        values = [self.function(x) for x in pts]
+        max_value = max(values) * 1.05
+        if max_value == 0:
+            max_value = 1
+
+        voronoi = Voronoi(pts)
+        vertices = voronoi.vertices
+        #edge_idxs = voronoi.ridge_vertices
+        cells = voronoi.regions
+        point_region = voronoi.point_region
+
+        for idx_cell, cell in enumerate(cells):
+            if (-1 not in cell) and (cell != []): #and (idx_cell not in big_cells):
+                value = values[point_region.tolist().index(idx_cell)]
+                axes.add_patch(Polygon([vertices[i].tolist() for i in cell],
+                               facecolor=cm.Blues(value / max_value, alpha), linewidth=line_width, edgecolor=(1, 1, 1, 0)))
+
+    def plot_delaunay(self, axes, **args):
         for simplex in self.triangulation:
             for i in range(len(simplex)):
                 for j in range(i, len(simplex)):
                     axes.plot([self.points[simplex[i]][0], self.points[simplex[j]][0]],
                               [self.points[simplex[i]][1], self.points[simplex[j]][1]],
-                              c='Black', linewidth=0.25, alpha=0.9)
+                              c='Black', linewidth=line_width)
 
+    def plot_extra(self, axes, **args):
+        super().plot_extra(axes, **args)
+        if 'delaunay' in args:
+            if args['delaunay']:
+                self.plot_delaunay(axes)
+
+    def plot_partitioning(self, axes, **args):
+        double_bbox_corners = (self.domain.corners() - np.average(self.domain.corners())) * 2 + np.average(self.domain.corners())
+        pts = np.vstack((self.points, double_bbox_corners))
+
+        voronoi = Voronoi(pts)
+        vertices = voronoi.vertices
+        cells = voronoi.regions
+
+        for idx_cell, cell in enumerate(cells):
+            if (-1 not in cell) and (cell != []): #and (idx_cell not in big_cells):
+                axes.add_patch(Polygon([vertices[i].tolist() for i in cell],
+                               facecolor=(1, 1, 1, 0),
+                               linewidth=line_width, edgecolor=to_rgba('Black', alpha),
+                               zorder=5))
 
 class DelaunayInterpolatorBoundaryIntersect(DelaunayInterpolator):
     base_name = "bounded ANNR"
@@ -210,10 +312,13 @@ class PartitioningInterpolator(Interpolator):
 
     # Since the new points cannot be added one by one, iteration_count can be
     # overshot
-    def run(self, iteration_count,
+    def run(self, iteration_count, continues=False,
             evaluate=False, evaluation_frequency=None,
             evaluation_set=np.array([]), evaluation_metrics=[]):
         print(f"Running {self.base_name} ({self.name})...", flush=True)
+
+        if continues:
+            raise NotImplementedError('Default DEFER implementations does not support consecutive runs')
 
         if not evaluate or not evaluation_frequency:
             evaluation_frequency = iteration_count * 2
@@ -252,15 +357,36 @@ class PartitioningInterpolator(Interpolator):
         partition = find_leaf(self.approximator.tree, point)
         return partition.f
 
-    def plot_points(self, axes):
+    def plot_points(self, axes, **args):
         marker_size = adaptive_marker_size(self.sample_count())
         points = np.asarray([partition.domain.center_vector for partition in self.partitions])
-        axes.scatter(points[:, 0], points[:, 1], s=marker_size, c='Orange', alpha=0.9)
+        axes.scatter(points[:, 0], points[:, 1], s=marker_size, c='Orange', zorder=10, alpha=alpha)
 
-    def plot_partitioning(self, axes):
+    def plot_partitioning(self, axes, **args):
         for partition in self.partitions:
             lo = partition.domain.lower_limit_vector
-            hi = partition.domain.upper_limit_vector
-            axes.plot([lo[0], hi[0]], [lo[1], lo[1]], c='Black', linewidth=0.25)
-            axes.plot([lo[0], lo[0]], [lo[1], hi[1]], c='Black', linewidth=0.25)
+            up = partition.domain.upper_limit_vector
+            rectangle = RectangularDomain(lo, up).corners()
+            rectangle = rectangle[ConvexHull(rectangle).vertices]
+            axes.add_patch(Polygon(rectangle,
+                           facecolor=(1, 1, 1, 0),
+                           linewidth=line_width, edgecolor=to_rgba('Black', alpha),
+                           zorder=5))
 
+    def plot_approximate(self, axes, **args):
+        values = []
+        for partition in self.partitions:
+            values.append(partition.f)
+
+        max_value = max(values) * 1.05
+        if max_value == 0:
+            max_value = 1
+
+        for partition in self.partitions:
+            lo = partition.domain.lower_limit_vector
+            up = partition.domain.upper_limit_vector
+            rectangle = RectangularDomain(lo, up).corners()
+            rectangle = rectangle[ConvexHull(rectangle).vertices]
+            axes.add_patch(Polygon(rectangle,
+                           facecolor=cm.Blues(partition.f / max_value, alpha),
+                           linewidth=line_width, edgecolor=(1, 1, 1, 0)))
