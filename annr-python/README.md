@@ -27,6 +27,13 @@ python main.py
 
 Four png files - two with approximated diagrams, one with ground truth plot and one with sqores - should appear in the same folder.
 
+<p align="middle" float="left">
+  <img src="README_files/ground_truth_gaussian.png" style="width:20%;" />
+  <img src="README_files/defer_gaussian.png" style="width:20%;" /> 
+  <img src="README_files/annr_gaussian.png" style="width:20%;" />
+  <img src="README_files/scores_gaussian.png" style="width:30%;" />
+</p>
+
 ### Other examples
 
 For other examples, go to the corresponding folder and run it as follows:
