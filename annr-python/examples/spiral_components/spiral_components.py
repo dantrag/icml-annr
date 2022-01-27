@@ -1,8 +1,8 @@
 import sys
 sys.path.append('../../')
 
-from dafaq.function import ImageFunctionBinary
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.function import ImageFunctionBinary
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                 PartitioningInterpolator as DEFER
 
 ### Load function as 2D image
@@ -48,7 +48,7 @@ scores = [
     ([[14, [1]], [20, [2]], [40, [4]], [60, [6]], [80, [7]], [100, [8]], [120, [14]], [140, [14]], [160, [17]], [180, [19]], [200, [14]], [220, [12]], [240, [10]], [260, [9]], [280, [8]], [300, [8]], [320, [7]], [340, [4]], [360, [4]], [380, [3]], [400, [2]], [420, [2]], [440, [2]], [460, [2]], [480, [2]], [500, [1]], [520, [1]], [540, [1]], [560, [1]], [580, [1]], [600, [1]], [620, [1]], [640, [1]], [660, [1]], [680, [1]], [700, [1]], [720, [1]], [740, [1]], [760, [1]], [780, [1]], [800, [1]], [820, [1]], [840, [1]], [860, [1]], [880, [1]], [900, [1]], [920, [1]], [940, [1]], [960, [1]], [980, [1]], [999, [1]]], 'ANNR'),
 ]
 
-from dafaq.utils import save_score_plot
+from pyannr.utils import save_score_plot
 save_score_plot(scores,
                 filename=f'{function.name}_ncc_scores.png',
                 title=f'Number of connected components',

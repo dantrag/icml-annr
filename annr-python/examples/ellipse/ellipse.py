@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../../')
 
-from dafaq.domain import RectangularDomain
-from dafaq.function import Ellipse, RotatedFunction
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.domain import RectangularDomain
+from pyannr.function import Ellipse, RotatedFunction
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                PartitioningInterpolator as DEFER
 
 
@@ -51,7 +51,7 @@ for score_per_angle in scores_per_angle:
         scores[i][0].append(score_per_angle[i][0])
 print(scores)
 
-from dafaq.utils import save_score_plot
+from pyannr.utils import save_score_plot
 save_score_plot(scores,
                 filename=f'ellipse_mae_scores.png',
                 title=rf'MAE scores',

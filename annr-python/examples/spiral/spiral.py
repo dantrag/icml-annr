@@ -1,8 +1,8 @@
 import sys
 sys.path.append('../../')
 
-from dafaq.function import ImageFunctionBinary
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.function import ImageFunctionBinary
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                 PartitioningInterpolator as DEFER
 
 ### Load function as 2D image

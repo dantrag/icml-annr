@@ -1,8 +1,8 @@
 import sys
 sys.path.append('../../')
 
-from dafaq.function import Rastrigin
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.function import Rastrigin
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                PartitioningInterpolator as DEFER
 
 function = Rastrigin()
@@ -35,7 +35,7 @@ for name, interpolator in interpolators:
 
 ### Save score graphs
 
-from dafaq.utils import save_score_plot
+from pyannr.utils import save_score_plot
 save_score_plot(scores,
                 filename=f'{function.name}_mae_scores_1000.png',
                 title=rf'MAE scores',

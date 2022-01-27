@@ -1,9 +1,9 @@
 import sys
 sys.path.append('../../')
 
-from dafaq.domain import RectangularDomain
-from dafaq.function import L1Norm
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.domain import RectangularDomain
+from pyannr.function import L1Norm
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                PartitioningInterpolator as DEFER
 
 function = L1Norm()
@@ -36,7 +36,7 @@ print(scores)
 
 ### Save score graphs
 
-from dafaq.utils import save_score_plot
+from pyannr.utils import save_score_plot
 save_score_plot(scores,
                 filename=f'{function.name}_mae_scores_300x300test.png',
                 title=rf'MAE scores',

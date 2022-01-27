@@ -3,9 +3,9 @@ sys.path.append('../../')
 
 import math
 import numpy as np
-from dafaq.function import Function
-from dafaq.domain import Domain
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.function import Function
+from pyannr.domain import Domain
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                PartitioningInterpolator as DEFER
 
 ### Signed distance to a boundary of balls intersection
@@ -62,7 +62,7 @@ for name, interpolator in interpolators:
 
 ### Save score graphs
 
-from dafaq.utils import save_score_plot
+from pyannr.utils import save_score_plot
 save_score_plot(scores,
                 filename=f'{function.name}_mae_scores.png',
                 title=rf'MAE scores',
