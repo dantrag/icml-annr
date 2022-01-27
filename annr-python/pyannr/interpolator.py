@@ -87,7 +87,7 @@ class Interpolator(metaclass=ABCMeta):
         axes.set_title(title)
         axes.set_xlim(self.domain.bbox()[0][0], self.domain.bbox()[1][0])
         axes.set_ylim(self.domain.bbox()[0][1], self.domain.bbox()[1][1])
-        axes.set_aspect(self.domain.bbox_dimensions()[1] / self.domain.bbox_dimensions()[0])
+        axes.set_aspect(1)
         
         figure.tight_layout()
 

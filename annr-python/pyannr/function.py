@@ -215,11 +215,17 @@ class StyblinskiTang(Function):
 class ImageFunctionBinary(Function):
     name = ""
 
-    def __init__(self, filename, domain=None):
+    def __init__(self, filename, domain=None, invert=False):
         self.name = Path(filename).stem
         self.pixels = np.array(plt.imread(filename))
+
+        if invert:
+            # make white pixels 0, and black pixels 1
+            self.pixels = 1.0 - self.pixels
+
         # convert to grayscale (ignore alpha)
         self.pixels = np.dot(self.pixels[..., :3], np.ones(3) / 3)
+
         self.dimensions = self.pixels.shape[:2]
 
         if not domain:
@@ -247,11 +253,17 @@ class ImageFunctionBinary(Function):
 class ImageFunction(Function):
     name = ""
 
-    def __init__(self, filename, domain=None):
+    def __init__(self, filename, domain=None, invert=False):
         self.name = Path(filename).stem
         self.pixels = np.array(plt.imread(filename))
+
+        if invert:
+            # make white pixels 0, and black pixels 1
+            self.pixels = 1.0 - self.pixels
+            
         # convert to grayscale (ignore alpha)
         self.pixels = np.dot(self.pixels[..., :3], np.ones(3) / 3)
+
         self.dimensions = self.pixels.shape[:2]
 
         if not domain:
