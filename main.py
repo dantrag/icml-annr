@@ -1,7 +1,7 @@
-from dafaq.function import NormalGaussian, Ellipse
-from dafaq.domain import *
-from dafaq.utils import *
-from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
+from pyannr.function import NormalGaussian
+from pyannr.domain import *
+from pyannr.utils import *
+from pyannr.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
                                PartitioningInterpolator as DEFER
 
 from scipy import stats
@@ -10,8 +10,7 @@ from scipy import stats
 ### Setting up the function and the domain
 
 domain = RectangularDomain([-2, -2], [2, 2])
-#function = NormalGaussian([0, 0])
-function = Ellipse([0, 0], [1, 1.5])
+function = NormalGaussian([0, 0])
 
 
 ### Setting up evaluation points and ground truth data for faster evaluation
@@ -60,7 +59,7 @@ function.save_plot(filename=f"{function.name}_ground_truth.png",
 ### Saving the scores plot
 
 save_score_plot(scores[::-1],
-                filename='ST_500.png',
+                filename=f'{function.name}_scores.png',
                 title=rf'Approximation of $f(x, y) = {function.equation}$',
                 metric_names=['MAE'], skip_first=1,
                 tex=True, log_scale=False) 
