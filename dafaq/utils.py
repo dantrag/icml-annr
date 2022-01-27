@@ -1,10 +1,12 @@
-from json import load
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 font_size = plt.rcParams['font.size']
 use_tex = plt.rcParams['text.usetex']
+
+def adaptive_marker_size(count):
+    return min(20, 200 // (count ** 0.5))
 
 def load_plot_style(tex=False):
     font_size = plt.rcParams['font.size']
@@ -16,7 +18,7 @@ def reset_plot_style():
     plt.rcParams['font.size'] = font_size
     plt.rcParams['text.usetex'] = use_tex
 
-def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0, tex=False, log_scale=False):
+def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0, tex=False, log_scale=False, x_suffix=''):
     load_plot_style(tex)
 
     figure, axes = plt.subplots(dpi=600)
@@ -62,14 +64,18 @@ def save_score_plot(score_curves, metric_names, filename, title="", skip_first=0
     axes.set_title(title)
     if log_scale:
         axes.set_yscale('log')
+    if x_suffix:
+        from matplotlib.ticker import FormatStrFormatter
+        figure.gca().xaxis.set_major_formatter(FormatStrFormatter(rf'%d{x_suffix}'))
 
     plt.tight_layout()
     figure.savefig(filename)
 
     reset_plot_style()
 
-#scores = \
-#[([[0, [1, 11]], [10, [2, 12]], [20, [1.5, 11.5]]], 'ANNR'),
-# ([[0, [3, 13]], [10, [3, 13]], [20, [2.5, 12.5]]], 'ANNR'),
-# ([[0, [5, 8]], [15, [7, 6]], [22, [11, 10]]], 'DEFER')]
-#save_score_plot(scores, ['MAE', 'MSE'], 'qq.png')
+# Example of a scores structure, with three interpolators and two metrics
+# scores = \
+#     [([[0, [1, 11]], [10, [2, 12]], [20, [1.5, 11.5]]], 'ANNR'),
+#     ([[0, [3, 13]], [10, [3, 13]], [20, [2.5, 12.5]]], 'ANNR'),
+#     ([[0, [5, 8]], [15, [7, 6]], [22, [11, 10]]], 'DEFER')]
+# save_score_plot(scores, ['MAE', 'MSE'], 'scores.png')

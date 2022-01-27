@@ -1,3 +1,4 @@
+from optparse import Values
 from random import seed
 from dafaq.function import Function
 from dafaq.domain import Domain, RectangularDomain
@@ -17,14 +18,11 @@ from matplotlib.colors import to_rgba
 
 from tqdm import tqdm
 
-from dafaq.utils import load_plot_style, reset_plot_style
+from dafaq.utils import load_plot_style, reset_plot_style, adaptive_marker_size
 
 
 line_width = 0.5
 alpha = 0.9
-
-def adaptive_marker_size(count):
-    return min(20, 200 // math.sqrt(count))
 
 class Interpolator(metaclass=ABCMeta):
     name = "undefined"
@@ -46,6 +44,10 @@ class Interpolator(metaclass=ABCMeta):
 
     @abstractmethod
     def evaluate(self, point):
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluate_set(self, evaluation_set, metrics):
         raise NotImplementedError
 
     def run(self, iteration_count, continues=False,
@@ -107,7 +109,7 @@ class DelaunayInterpolator(Interpolator):
     base_name = "ANNR"
     iteration_offset = 0
 
-    def __init__(self, function, domain, seeds=10, add_corners=True, Lambda=1.0):
+    def __init__(self, function, domain, seeds=10, add_corners=True, Lambda='auto'):
         super().__init__(function, domain)
 
         self.points = np.empty([0, domain.dimensionality()])
@@ -120,6 +122,13 @@ class DelaunayInterpolator(Interpolator):
         self.seeds_count = len(seeds)
         if len(seeds):
             self.add_points(seeds)
+        
+        if Lambda == 'auto':
+            seed_values = [function(x) for x in seeds]
+            value_scale = max(seed_values) - min(seed_values)
+            value_scale = value_scale if value_scale else 1
+            Lambda = domain.volume() / value_scale
+
         self.Lambda = Lambda
         self.name = f'dafaq_{function.name}_{hex(id(self))}'
         self.iteration_offset = self.seeds_count
@@ -133,12 +142,13 @@ class DelaunayInterpolator(Interpolator):
         # Recomputing entire triangulation. Can be done more efficiently with Delaunay update algos
         self.triangulation = Delaunay(self.points).simplices
         
-        if self.sample_count() % 100 == 0:
-            pass
-            #if not manual_addition:
-            #    self.save_points_to_file()
-            #self.snapshots.append(self.points.copy())
-            #print(len(self.points))
+        if not manual_addition:
+            if self.sample_count() % 100 == 0:
+                pass
+                # uncomment to save intermediate results
+                #self.save_points_to_file()
+                #self.snapshots.append(self.points.copy())
+                #print(len(self.points))
 
     def score(self, simplex_points):
         vertices = simplex_points.copy()
@@ -221,18 +231,19 @@ class DelaunayInterpolator(Interpolator):
         double_bbox_corners = (self.domain.corners() - np.average(self.domain.corners())) * 2 + np.average(self.domain.corners())
         pts = np.vstack((self.points, double_bbox_corners))
         values = [self.function(x) for x in pts]
-        max_value = max(values) * 1.05
+        max_value = max(values[:-len(double_bbox_corners)])
+        max_value *= 1.05
+
         if max_value == 0:
             max_value = 1
 
         voronoi = Voronoi(pts)
         vertices = voronoi.vertices
-        #edge_idxs = voronoi.ridge_vertices
         cells = voronoi.regions
         point_region = voronoi.point_region
 
         for idx_cell, cell in enumerate(cells):
-            if (-1 not in cell) and (cell != []): #and (idx_cell not in big_cells):
+            if (-1 not in cell) and (cell != []):
                 value = values[point_region.tolist().index(idx_cell)]
                 axes.add_patch(Polygon([vertices[i].tolist() for i in cell],
                                facecolor=cm.Blues(value / max_value, alpha), linewidth=line_width, edgecolor=(1, 1, 1, 0)))
@@ -260,7 +271,7 @@ class DelaunayInterpolator(Interpolator):
         cells = voronoi.regions
 
         for idx_cell, cell in enumerate(cells):
-            if (-1 not in cell) and (cell != []): #and (idx_cell not in big_cells):
+            if (-1 not in cell) and (cell != []):
                 axes.add_patch(Polygon([vertices[i].tolist() for i in cell],
                                facecolor=(1, 1, 1, 0),
                                linewidth=line_width, edgecolor=to_rgba('Black', alpha),
@@ -337,15 +348,17 @@ class PartitioningInterpolator(Interpolator):
             num_fn_calls=iteration_count,
             callback=lambda iteration_count, approximator:
                 score_curve.append([approximator.num_partitions,
-                                    self.evaluate_set(approximator.tree,
-                                                      evaluation_set,
-                                                      evaluation_metrics)]),
+                                    self.evaluate_set(evaluation_set,
+                                                      evaluation_metrics,
+                                                      approximator.tree)]),
             callback_freq_fn_calls=evaluation_frequency)
         self.partitions = self.approximator.all_partitions()
         
         return score_curve
 
-    def evaluate_set(self, current_tree, evaluation_set, metrics):
+    def evaluate_set(self, evaluation_set, metrics, current_tree=None):
+        if not current_tree:
+            current_tree = self.approximator.tree
         evaluation_results = [self.evaluate_tree(current_tree, point) for point in evaluation_set]
         return [metric(evaluation_set, evaluation_results) for metric in metrics] if evaluation_set.size else []
 
