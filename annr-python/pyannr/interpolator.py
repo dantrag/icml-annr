@@ -130,7 +130,7 @@ class DelaunayInterpolator(Interpolator):
             Lambda = domain.volume() / value_scale
 
         self.Lambda = Lambda
-        self.name = f'dafaq_{function.name}_{hex(id(self))}'
+        self.name = f'annr_{function.name}_{hex(id(self))}'
         self.iteration_offset = self.seeds_count
 
     def sample_count(self):
