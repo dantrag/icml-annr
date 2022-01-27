@@ -12,8 +12,8 @@ function = ImageFunctionBinary('spiral.png')
 domain = function.default_domain()
 
 interpolators = [
-#    ('DEFER', DEFER(function, domain)),
-#    ('ANNR', ANNR(function, domain)),
+    ('DEFER', DEFER(function, domain)),
+    ('ANNR', ANNR(function, domain)),
 ]
 
 

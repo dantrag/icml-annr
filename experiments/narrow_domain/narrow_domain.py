@@ -1,6 +1,4 @@
 import sys
-
-from cv2 import DIST_MASK_3
 sys.path.append('../../')
 
 import math
@@ -8,7 +6,7 @@ import numpy as np
 from dafaq.function import Function
 from dafaq.domain import Domain
 from dafaq.interpolator import DelaunayInterpolatorBoundaryIntersect as ANNR,\
-                                PartitioningInterpolator as DEFER
+                               PartitioningInterpolator as DEFER
 
 ### Signed distance to a boundary of balls intersection
 ### balls: (-3, -3), 5 and (4, 4), 5
