@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
-from dafaq.utils import load_plot_style, reset_plot_style
-from dafaq.domain import RectangularDomain
+from pyannr.utils import load_plot_style, reset_plot_style
+from pyannr.domain import RectangularDomain
 
 
 class Function:

@@ -1,8 +1,8 @@
 from optparse import Values
 from random import seed
-from dafaq.function import Function
-from dafaq.domain import Domain, RectangularDomain
-from dafaq.geometry_utils import *
+from pyannr.function import Function
+from pyannr.domain import Domain, RectangularDomain
+from pyannr.geometry_utils import *
 
 from abc import ABCMeta, abstractmethod
 
@@ -18,7 +18,7 @@ from matplotlib.colors import to_rgba
 
 from tqdm import tqdm
 
-from dafaq.utils import load_plot_style, reset_plot_style, adaptive_marker_size
+from pyannr.utils import load_plot_style, reset_plot_style, adaptive_marker_size
 
 
 line_width = 0.5
@@ -296,13 +296,9 @@ class DelaunayInterpolatorBoundaryIntersect(DelaunayInterpolator):
 
 ### DEFER
 
-import sys
-
-sys.path = ['/media/dantrag/data/work/programming/dani/density/dafaq/'] + sys.path
-
-from defer.helpers import *
-from defer.variables import Variable
-from defer.tree import find_leaf
+from pydefer.helpers import *
+from pydefer.variables import Variable
+from pydefer.tree import find_leaf
 
 import warnings
 warnings.filterwarnings('ignore')
