@@ -1,0 +1,5 @@
+matplotlib==3.4.2
+numpy==1.17.4
+scipy==1.4.1
+tqdm==4.62.2
+xxhash==2.0.2
