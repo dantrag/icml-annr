@@ -32,7 +32,7 @@ for name, interpolator in interpolators:
         score = interpolator.run(1000, evaluate=True, evaluation_frequency=50,
                                  evaluation_set=test_set, evaluation_metrics=[MAE])
         scores.append((score, name))
-
+print(scores)
 
 ### Save score graphs
 
