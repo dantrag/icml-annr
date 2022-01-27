@@ -2,13 +2,10 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-from abc import ABCMeta, abstractmethod
-from functools import lru_cache
 from pathlib import Path
 
 from dafaq.utils import load_plot_style, reset_plot_style
-
-from .domain import Domain, RectangularDomain
+from dafaq.domain import RectangularDomain
 
 
 class Function:
@@ -38,7 +35,7 @@ class Function:
         for axis in axes:
             axis.imshow(values , cmap='Blues',
                         vmin=(min_value if min_value else np.min(values)),
-                        vmax=(max_value if max_value else np.max(values)), # artificially tone down
+                        vmax=(max_value if max_value else np.max(values)),
                         interpolation='nearest',
                         extent=(bbox[0][0],bbox[1][0], bbox[0][1], bbox[1][1]),
                         alpha=0.9)
@@ -85,7 +82,7 @@ class RotatedFunction(Function):
         return self.function(x)
 
 
-### Primitive functions
+### Standard functions
 
 # Simple Gaussian in a form of A*exp(-Bx^2)
 class Gaussian(Function):
@@ -104,7 +101,7 @@ class Gaussian(Function):
 class NormalGaussian(Function):
     name = "gaussian"
 
-    def __init__(self, mu, sigma_squared):
+    def __init__(self, mu, sigma_squared=1):
         self.mu = np.array(mu)
         self.sigma_squared = sigma_squared
         if not np.isscalar(sigma_squared):
@@ -143,6 +140,7 @@ class Ellipse(Function):
         assert min(semiaxes) > 0, f"Semiaxes should be positive!"
         self.center = np.array(center)
         self.semiaxes = np.array(semiaxes)
+        self.equation = "ellipse"
 
     def __call__(self, x):
         assert len(x) == len(self.center), f"Point should have the same dimensionality ({len(self.center)})"
@@ -165,6 +163,7 @@ class Himmelblau(Function):
 
 class HimmelblauLike(Function):
     name = "himmelblau-like"
+    equation = "(x^2 + y - 11)^2 + (x + y^2 - 7) + 12"
 
     @classmethod
     def __call__(cls, x):
@@ -245,28 +244,34 @@ class ImageFunctionBinary(Function):
     def default_domain(self):
         return self.domain
 
-### Not upgraded functions
+class ImageFunction(Function):
+    name = ""
 
-def onlyx(x):
-    return x[0]
+    def __init__(self, filename, domain=None):
+        self.name = Path(filename).stem
+        self.pixels = np.array(plt.imread(filename))
+        # convert to grayscale (ignore alpha)
+        self.pixels = np.dot(self.pixels[..., :3], np.ones(3) / 3)
+        self.dimensions = self.pixels.shape[:2]
 
-def yx(x):
-    return 1/(abs(x[0] + x[1]) + 1)
+        if not domain:
+            domain = RectangularDomain(np.zeros(2), self.pixels.shape - np.ones(2))
+        assert domain.dimensionality() == 2, "A function loaded from an image must have a 2-dimensional domain!"
+        self.domain = domain
+        self.bbox = self.domain.bbox()
 
-def hyperbolic(x):
-    return 1/(math.sqrt(x[0]**2 + x[1]**2) + 1)
+    def __call__(self, x):
+        x = np.asarray(x)
+        assert len(x) == 2, f"Query dimension must be 2, not {len(x)} for a function loaded from an image"
+        # transform query coodinates to unit cube and then to image coordinates
+        x = (x - self.bbox[0]) / (self.bbox[1] - self.bbox[0])
+        x = x * (self.dimensions - np.ones(2)) + np.ones(2) * 0.5
+        x = x.astype(int)
+        x = np.minimum(x, self.bbox[1])
+        x = np.maximum(x, self.bbox[0])
+        x = x.astype(int)
 
-def hyperbolic_sharp(x):
-    return 1/(math.sqrt(x[0]**2 + x[1]**2) * 10 + 1)
+        return self.pixels[x[0]][x[1]] / 255
 
-def hyperbolic_sharp_inf(x):
-    return 1/(math.sqrt(x[0]**2 + x[1]**2) + 0.01)
-
-def cone(x):
-    return math.sqrt(x[0]**2 + x[1]**2)
-
-def stripe(x):
-    return float(abs(x[0]) < 1)
-
-
-
+    def default_domain(self):
+        return self.domain

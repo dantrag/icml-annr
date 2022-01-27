@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import math
 import numpy as np
 from numpy.random import random
 
@@ -14,6 +15,11 @@ class Domain(metaclass=ABCMeta):
 
     @abstractmethod
     def bbox(self):
+        raise NotImplementedError
+        return None
+
+    @abstractmethod
+    def volume(self):
         raise NotImplementedError
         return None
 
@@ -92,6 +98,9 @@ class RectangularDomain(Domain):
         self.lower, self.upper = np.minimum(self.lower, self.upper), np.maximum(self.lower, self.upper)
         self.d = len(self.lower)
 
+    def volume(self):
+        return np.prod(self.upper - self.lower)
+
     def bbox(self):
         return self.lower, self.upper
 
@@ -133,6 +142,10 @@ class SphericalDomain(Domain):
         self.d = len(self.center)
         assert np.isscalar(self.radius),\
                f"Radius must be a scalar (now {type(self.radius)})"
+
+    def volume(self):
+        return math.pi ** (self.d / 2) / math.gamma(self.d / 2 + 1) *\
+               self.radius ** self.d
 
     def bbox(self):
         unit = np.array([self.radius] * len(self.center))
